@@ -1,0 +1,49 @@
+# 飞书表格列名映射（按列名匹配，不依赖列顺序）
+feishu_columns:
+  module: "模块"
+  screenshot: "问题截图"
+  description: "问题描述"
+  design_ref: "设计稿参考"
+  reviewer: "走查人"
+  progress: "进度"
+  handler: "处理人"
+  note: "备注"
+
+# DevOps 表单默认值（从表单实际预填值获取）
+devops_defaults:
+  project_name: "灵基AIOS项目"
+  module_path: "AI能力中心（R020334）"
+  defect_type: "交互体验"
+  discovery_stage: "验收测试"
+  priority: "高"
+  source: "手工新增"
+  test_env: "LingeeBeta 版"
+  project_team: "Chat日历及会议组"
+  related_story: "2508756100443247625"
+
+# 处理人姓名 → DevOps 工号映射（工号用于精确定位，姓名用于搜索）
+handler_mapping:
+  林健宁: "38718"
+  李一萍: "90444"
+  张艺琼: "90443"
+  申明辉: "90430"
+  孔维辰曦: "90143"
+  廖家琪: ""       # 暂未找到工号，将使用姓名直接搜索
+  廖佳琪: ""       # 同廖家琪（拼写错误），映射同上
+  曹卫群: ""       # 暂未找到工号，将使用姓名直接搜索
+  default: "孔维辰曦"   # 找不到时默认指派给孔维辰曦
+
+# 飞书 API 凭证
+feishu_api:
+  app_id: "YOUR_APP_ID"
+  app_secret: "YOUR_APP_SECRET"
+  base_url: "https://open.feishu.cn/open-apis"
+
+# 标题格式模板
+title_template: "【{progress}】【{module}】{description}"
+
+# 备注格式模板
+note_template: |
+  {original_note}
+  走查人{reviewer}
+  {design_ref_text}
