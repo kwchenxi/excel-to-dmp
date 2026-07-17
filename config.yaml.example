@@ -11,6 +11,50 @@ feishu_columns:
 
 # DevOps 表单默认值（从表单实际预填值获取）
 devops_defaults:
+  project_name: "YOUR_PROJECT_NAME"
+  module_path: "YOUR_MODULE_PATH"
+  defect_type: "交互体验"
+  discovery_stage: "验收测试"
+  priority: "高"
+  source: "手工新增"
+  test_env: "YOUR_TEST_ENV"
+  project_team: "YOUR_TEAM"
+  related_story: "YOUR_STORY_ID"
+
+# 处理人姓名 → DevOps 工号映射（工号用于精确定位，姓名用于搜索）
+handler_mapping:
+  张三: "10001"
+  李四: "10002"
+  王五: ""       # 暂未找到工号，将使用姓名直接搜索
+  default: "张三"   # 找不到时默认指派
+
+# 飞书 API 凭证
+feishu_api:
+  app_id: "YOUR_APP_ID"
+  app_secret: "YOUR_APP_SECRET"
+  base_url: "https://open.feishu.cn/open-apis"
+
+# 标题格式模板
+title_template: "【{progress}】【{module}】{description}"
+
+# 备注格式模板
+note_template: |
+  {original_note}
+  走查人{reviewer}
+  {design_ref_text}
+# 飞书表格列名映射（按列名匹配，不依赖列顺序）
+feishu_columns:
+  module: "模块"
+  screenshot: "问题截图"
+  description: "问题描述"
+  design_ref: "设计稿参考"
+  reviewer: "走查人"
+  progress: "进度"
+  handler: "处理人"
+  note: "备注"
+
+# DevOps 表单默认值（从表单实际预填值获取）
+devops_defaults:
   project_name: "灵基AIOS项目"
   module_path: "AI能力中心（R020334）"
   defect_type: "交互体验"

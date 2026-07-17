@@ -1,4 +1,16 @@
 {
+  "name": "excel-to-dmp",
+  "version": "1.0.0",
+  "description": "飞书表格数据提取 → 金蝶 DevOps 缺陷自动创建",
+  "type": "module",
+  "dependencies": {
+    "playwright": "^1.61.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
+{
   "dependencies": {
     "playwright": "^1.61.1"
   }
