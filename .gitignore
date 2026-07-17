@@ -21,6 +21,17 @@ attachment_report.json
 images/
 screenshots/
 
+# 调试脚本（一次性探索脚本）
+scripts/_debug/
+
+# 废弃脚本
+scripts/create_defects_playwright.py
+scripts/fill_devops.py
+scripts/reupload_137_140.mjs
+scripts/reupload_batch.mjs
+scripts/upload_batch.mjs
+scripts/upload_one.mjs
+
 # IDE / Editor
 .idea/
 .vscode/
@@ -29,19 +40,3 @@ screenshots/
 
 # macOS
 .DS_Store
-# Python
-__pycache__/
-*.pyc
-.venv/
-
-# 敏感配置（含 API 密钥）
-config.yaml
-
-# 运行时生成
-pending_defects.json
-images/
-
-# IDE
-.idea/
-.vscode/
-*.swp
