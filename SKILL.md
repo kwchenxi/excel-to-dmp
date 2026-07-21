@@ -1,17 +1,117 @@
 ---
 name: excel-to-dmp
-description: 从飞书表格自动提取缺陷数据并批量创建到金蝶 DevOps 平台（DMP）。支持动态读取模块、问题描述、处理人、走查人、设计稿参考等字段，自动映射到 DevOps 表单，包括图片附件上传。
+description: 读取飞书/腾讯文档/金山文档/本地Excel中的BUG记录（模块、问题描述、截图、处理人、走查人等），自动在金蝶DMP缺陷管理系统逐条创建缺陷单，包括附件上传和字段映射。适用于缺陷批量录入场景，替代手动逐条填写，单条约20秒完成录入。
 ---
 
-# 飞书表格 → DevOps 缺陷自动创建
+# BUG 记录批量录入金蝶 DMP
+
+## 数据源策略
+
+按数据源选择最优提取方式：
+
+| 数据源在哪 | 推荐脚本 | 图片 | 说明 |
+|-----------|---------|------|------|
+| **飞书** | `extract_feishu.py`（API）| ✅ 自动下载 | 项目重度依赖截图，**飞书 API 是唯一能自动拿图的途径**，优先用 |
+| **腾讯文档** | `extract_tencent.py`（API）| ✅ 自动下载 | 需配置腾讯开放平台 API 凭证 |
+| **金山文档** | `extract_wps.py`（API）| ✅ 自动下载 | 需配置 WPS 开放平台 API 凭证 |
+| **本地 Excel** | `extract_excel.py` | ❌ 需手动补 | 通用，导入 .xlsx 后使用 |
+
+### 关键差异：图片
+
+- **飞书 API**：能通过 fileToken 自动下载图片（本项目 132 张截图的核心来源）
+- **Excel 文件**：各平台导出 xlsx 时**普遍丢失图片**（飞书/腾讯/金山均如此），需从原平台手动下载图片放 `images/`，按 `r{行号}_screenshot_xxx.png` 命名
+
+> ⚠️ 因此：**数据源是飞书时，优先用 `extract_feishu.py`（带图）**；只有数据源不是飞书、或不需要图片时，才用 `extract_excel.py`。
+
+### 提取脚本
+
+| 脚本 | 输入 | 输出 |
+|------|------|------|
+| `scripts/extract_feishu.py` | wiki token | pending_defects.json + images/ |
+| `scripts/extract_tencent.py` | 腾讯文档 URL | pending_defects.json + images/ |
+| `scripts/extract_wps.py` | 金山文档 URL | pending_defects.json + images/ |
+| `scripts/extract_excel.py` | Excel 文件路径 | pending_defects.json（无图）|
+
+所有脚本输出统一的 `pending_defects.json`，下游 `create_batch.mjs` 不区分来源。
+
+### 统一输出格式（所有数据源）
+
+```json
+{
+  "row": 2,
+  "module": "日历",
+  "title": "【进度】【模块】描述",
+  "desc": "问题描述",
+  "handler_name": "姓名",
+  "handler_id": "工号",
+  "note": "备注",
+  "screenshot_files": [],
+  "design_ref_files": [],
+  "status": "pending"
+}
+```
+
+---
 
 ## 触发场景
 
 当用户说以下内容时触发此 Skill：
-- "帮我把飞书表格的缺陷填到 DevOps"
+- "帮我把飞书/腾讯/金山/Excel 表格的缺陷填到 DevOps"
 - "批量创建缺陷单"
-- "从飞书表格创建 DevOps 缺陷"
-- 发送飞书 wiki 链接并要求创建缺陷
+- "从在线表格创建 DevOps 缺陷"
+- 发送飞书/腾讯/金山文档链接并要求创建缺陷
+
+## ⚠️ 人工确认节点（执行前必做）
+
+Claude 执行此 Skill 时，**严禁自行猜测以下信息**，必须停下来向用户确认：
+
+### 首次使用（config.yaml 未配置或为空）
+
+Claude 必须先提取数据，然后**一次性集中确认**：
+
+1. **处理人 → 工号映射**
+   - Claude 列出表格中所有处理人姓名
+   - 用户提供每个姓名对应的 DevOps 工号
+   - Claude 生成 `handler_mapping` 写入 config.yaml
+
+2. **默认值与必填项确认**
+   - 模块路径（如"会议(LJ0001-0009)"）
+   - 发现阶段（如"dev测试"）
+   - 优先级、缺陷类型、测试环境等
+   - **关联故事编码**（必填，搜索 API 不可用。若飞书表格有该列则用表格值，否则问用户）
+   - 其他 DevOps 必填字段
+
+   > ⚠️ 关联故事编码可能每批不同。若用户本次提供的编码与 config 默认值不同，以本次为准。
+
+3. **列名映射确认**
+   - Claude 推断飞书列名 → DevOps 字段的映射
+   - 用户确认或修正
+
+4. **标题/备注模板确认**
+   - Claude 展示模板预览
+   - 用户确认或修改
+
+### 执行中遇到新值
+
+当 Claude 发现 config.yaml 未覆盖的新值时，**暂停并询问**：
+
+1. **新处理人**：表格中出现 config 未映射的姓名
+   - Claude："row 145 处理人'王五'不在映射表，工号是？"
+
+2. **新模块**：表格中出现 config 未配置的模块路径
+
+3. **数据异常**：
+   - 处理人字段不像人名（如"需要组件库去改"）
+   - 必填字段为空
+   - Claude 暂停询问是否跳过或如何处理
+
+### 确认呈现原则
+
+- **批量展示，不逐条问**：首次配置时，一次性列出所有待确认项
+- **静默复用已知值**：config 已有的映射，直接使用不重复问
+- **只问不确定的**：只询问 config 未覆盖的新值或每批必变的值
+
+---
 
 ## 工作流程
 

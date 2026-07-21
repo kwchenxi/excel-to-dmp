@@ -21,6 +21,12 @@ attachment_report.json
 images/
 screenshots/
 
+# 数据文件
+*.xlsx
+*.xls
+*.csv
+README.md
+
 # 调试脚本（一次性探索脚本）
 scripts/_debug/
 
