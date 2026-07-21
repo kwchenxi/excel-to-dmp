@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from utils import load_config, build_defect_data, save_results
 
 def get_tenant_access_token(app_id, app_secret, base_url):
-    """获取飞书 tenant_access_token"""
+    """获取飞书 tenant_access_token（有效期约 2 小时）"""
     print("\n=== 获取 tenant_access_token ===")
     url = f"{base_url}/auth/v3/tenant_access_token/internal"
     resp = requests.post(url, json={"app_id": app_id, "app_secret": app_secret})
@@ -21,8 +21,9 @@ def get_tenant_access_token(app_id, app_secret, base_url):
         print(f"❌ 获取token失败: {data}")
         return None
     token = data["tenant_access_token"]
-    print(f"✅ Token获取成功")
-    return token
+    expire = data.get("expire", 7200)
+    print(f"✅ Token获取成功（有效期 {expire} 秒）")
+    return token, expire
 
 def get_spreadsheet_token_from_wiki(token, wiki_token, base_url):
     """通过 wiki node token 获取表格 token"""
@@ -191,13 +192,15 @@ def main():
     api_config = config.get("feishu_api", {})
     base_url = api_config.get("base_url", "https://open.feishu.cn/open-apis")
     
-    token = get_tenant_access_token(
+    token_info = get_tenant_access_token(
         api_config.get("app_id"),
         api_config.get("app_secret"),
         base_url
     )
-    if not token:
+    if not token_info:
         return
+    token, expire = token_info
+    token_start = time.time()
     
     spreadsheet_token = get_spreadsheet_token_from_wiki(token, args.wiki_token, base_url)
     if not spreadsheet_token:
@@ -208,9 +211,24 @@ def main():
         return
     
     sheet_id = sheets[0].get("sheet_id")
-    column_names = config.get("feishu_columns", {})
+    column_names = config.get("column_mapping", config.get("feishu_columns", {}))
     column_indices = find_column_indices(token, spreadsheet_token, sheet_id, column_names, base_url)
     defects = read_sheet_data(token, spreadsheet_token, sheet_id, column_indices, base_url)
+    
+    # 下载图片前检查 token 是否即将过期（预留 10 分钟缓冲）
+    elapsed = time.time() - token_start
+    if elapsed > (expire - 600):
+        print("\n⚠️ Token 即将过期，正在刷新...")
+        new_token_info = get_tenant_access_token(
+            api_config.get("app_id"),
+            api_config.get("app_secret"),
+            base_url
+        )
+        if new_token_info:
+            token, expire = new_token_info
+            token_start = time.time()
+            print("✅ Token 已刷新")
+    
     defects = download_images(token, defects, args.images_dir, base_url)
     results = build_defect_data(defects, config)
     

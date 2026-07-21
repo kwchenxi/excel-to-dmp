@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 /**
- * 智能补传：打开任意编辑页面，脚本读标题自动匹配正确图片
- * 用法: node scripts/reupload_smart.mjs
+ * 智能补传：自动找出有图片但未上传完整的已创建缺陷
+ *
+ * 用法: node scripts/reupload_smart.mjs [rows]
+ *
+ * 参数: rows - 可选，指定行号（逗号分隔）。不传则自动检测所有有图片文件的已创建缺陷。
  */
 import { chromium } from 'playwright';
 import fs from 'fs';
@@ -12,9 +15,15 @@ if (!page) { console.error('无 DevOps 页面'); process.exit(1); }
 await page.bringToFront();
 
 const defects = JSON.parse(fs.readFileSync('pending_defects.json', 'utf-8'));
-// 需要补传的：136-140 有图片的
-const needRows = [136, 137, 138, 140];
-const pending = needRows.map(r => defects.find(d => d.row === r)).filter(d => d && (d.screenshot_files?.length || d.design_ref_files?.length));
+// 智能检测：有图片文件的已创建缺陷（可通过 CLI 参数指定行号）
+const sel = process.argv[2] || '';
+let pending;
+if (/^\d+(,\d+)*$/.test(sel)) {
+  const needRows = sel.split(',').map(Number);
+  pending = needRows.map(r => defects.find(d => d.row === r)).filter(d => d && (d.screenshot_files?.length || d.design_ref_files?.length));
+} else {
+  pending = defects.filter(d => d.status === 'created' && (d.screenshot_files?.length || d.design_ref_files?.length));
+}
 
 console.log(`\n==== 智能补传 ${pending.length} 条（打开任意编辑页面，自动匹配）====`);
 pending.forEach(d => console.log(`  - ${d.desc.slice(0, 25)}`));

@@ -106,7 +106,7 @@ def main():
     ws = wb[wb.sheetnames[args.sheet]]
     print(f"  📋 工作表: {wb.sheetnames[args.sheet]}")
     
-    column_names = config.get("feishu_columns", {})
+    column_names = config.get("column_mapping", config.get("feishu_columns", {}))
     column_indices = find_column_indices(ws, column_names)
     
     defects = read_excel_data(ws, column_indices, args.images_dir)

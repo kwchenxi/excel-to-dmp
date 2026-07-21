@@ -161,7 +161,7 @@ def main():
         print("❌ 未读取到数据")
         return
     
-    column_names = config.get("feishu_columns", {})  # 复用同一套列名映射
+    column_names = config.get("column_mapping", config.get("feishu_columns", {}))  # 复用同一套列名映射
     column_indices = find_column_indices(rows, column_names)
     
     # 解析数据行

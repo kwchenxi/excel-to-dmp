@@ -20,6 +20,19 @@
 import { chromium } from 'playwright';
 import fs from 'fs';
 
+// ===== 加载配置（发现阶段等默认值） =====
+let CONFIG = {};
+try {
+  const yaml = (await import('js-yaml')).default || (await import('js-yaml'));
+  CONFIG = yaml.load(fs.readFileSync('config.yaml', 'utf-8')) || {};
+} catch {
+  try { CONFIG = JSON.parse(fs.readFileSync('config.yaml', 'utf-8')); } catch {}
+}
+const DEFAULTS = CONFIG.devops_defaults || {};
+const DISCOVERY_STAGE = DEFAULTS.discovery_stage || 'dev测试';
+// 发现阶段搜索词：取前缀部分（如 "dev测试" → "dev"）
+const DISCOVERY_SEARCH = DISCOVERY_STAGE.replace(/测试|发布|编码|sit|sit测试|灰度/gi, '').trim() || DISCOVERY_STAGE.slice(0, 3);
+
 // ===== helper =====
 async function navigateToDefectList(page) {
   if (await page.locator('#tblnew').count() > 0) return true;
@@ -143,8 +156,8 @@ try {
   console.log('[3/6] 处理人:', defect.handler_name);
   await fillBasedata(page, '处理人', defect.handler_name);
 
-  console.log('[4/6] 发现阶段: dev测试');
-  await fillBasedata(page, '发现阶段', 'dev', 'dev测试');
+  console.log('[4/6] 发现阶段:', DISCOVERY_STAGE);
+  await fillBasedata(page, '发现阶段', DISCOVERY_SEARCH, DISCOVERY_STAGE);
 
   console.log('[5/6] 备注');
   await page.locator('.kd-cq-field.kd-cq-textarea:visible', { hasText: '备注' }).first()

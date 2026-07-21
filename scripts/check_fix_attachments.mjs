@@ -8,8 +8,13 @@ const LIST_URL = fs.readFileSync('.defect-list-url.txt', 'utf-8').trim();
 const data = JSON.parse(fs.readFileSync('pending_defects.json', 'utf-8'));
 
 const sel = process.argv[2] || '';
-const defaultRows = [13,14,15,16,17,18,49,119,123,124,125,126,128,129,130,131,132,133,134,136,137,138,140,141,142,144];
-const checkRows = /^\d+(,\d+)*$/.test(sel) ? sel.split(',').map(Number) : defaultRows;
+// 默认：检查所有有图片文件的已创建缺陷（可通过 CLI 参数指定行号）
+let checkRows;
+if (/^\d+(,\d+)*$/.test(sel)) {
+  checkRows = sel.split(',').map(Number);
+} else {
+  checkRows = data.filter(d => d.status === 'created' && (d.screenshot_files?.length || d.design_ref_files?.length)).map(d => d.row);
+}
 const targets = data.filter(d => checkRows.includes(d.row) && d.status === 'created');
 
 async function goToList(page) {

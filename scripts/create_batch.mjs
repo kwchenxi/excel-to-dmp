@@ -24,6 +24,18 @@
 import { chromium } from 'playwright';
 import fs from 'fs';
 
+// ===== 加载配置（发现阶段等默认值） =====
+let CONFIG = {};
+try {
+  const yaml = (await import('js-yaml')).default || (await import('js-yaml'));
+  CONFIG = yaml.load(fs.readFileSync('config.yaml', 'utf-8')) || {};
+} catch {
+  try { CONFIG = JSON.parse(fs.readFileSync('config.yaml', 'utf-8')); } catch {}
+}
+const DEFAULTS = CONFIG.devops_defaults || {};
+const DISCOVERY_STAGE = DEFAULTS.discovery_stage || 'dev测试';
+const DISCOVERY_SEARCH = DISCOVERY_STAGE.replace(/测试|发布|编码|sit|sit测试|灰度/gi, '').trim() || DISCOVERY_STAGE.slice(0, 3);
+
 const storyValue = process.argv[2] || '';
 const saveMethod = process.argv[3] || 'click';
 const sel = process.argv[4] || 'pending';
@@ -195,7 +207,7 @@ async function createDefect(page, defect, storyValue, saveMethod) {
   }, '<p>' + defect.desc.replace(/\n/g, '</p><p>') + '</p>');
   console.log('  填字段: 处理人/发现阶段/备注/关联故事...');
   await fillBasedata(page, '处理人', defect.handler_name);
-  await fillBasedata(page, '发现阶段', 'dev', 'dev测试');
+  await fillBasedata(page, '发现阶段', DISCOVERY_SEARCH, DISCOVERY_STAGE);
   await page.locator('.kd-cq-field.kd-cq-textarea:visible', { hasText: '备注' }).first()
     .locator('textarea:visible').first().fill(defect.note);
   if (storyValue) await setStory(page, storyValue);
